@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Silício &amp; Bits – Quiz de CPU e Armazenamento</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=IBM+Plex+Sans:wght@400;600&display=swap">
+<style>
+/* ===== CORES (tema escuro por padrão; claro se o sistema preferir) ===== */
+:root{--bg:#0d1226;--panel:#151b38;--ink:#eaf0ff;--mut:#97a2c9;--cu:#f0a04b;--cy:#4de1d2;--ok:#5be3a0;--err:#ff6b81;--line:#2b3566;--grid:rgba(77,225,210,.07);
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]){--bg:#f1f4fb;--panel:#fff;--ink:#17204a;--mut:#56608a;--cu:#c4701a;--cy:#0f9d94;--ok:#0f9a62;--err:#d1405a;--line:#cdd4ea;--grid:rgba(15,157,148,.08)}}
+:root[data-theme="dark"]{--bg:#0d1226;--panel:#151b38;--ink:#eaf0ff;--mut:#97a2c9;--cu:#f0a04b;--cy:#4de1d2;--ok:#5be3a0;--err:#ff6b81;--line:#2b3566;--grid:rgba(77,225,210,.07)}
+html,body{margin:0;min-height:100%}
+/* fundo: brilho no topo + malha de placa de circuito */
+body{background:radial-gradient(900px 480px at 50% -8%,color-mix(in srgb,var(--cy) 20%,transparent),transparent),
+ linear-gradient(var(--grid) 1px,transparent 1px) 0 0/34px 34px,linear-gradient(90deg,var(--grid) 1px,transparent 1px) 0 0/34px 34px,var(--bg);
+ color:var(--ink);font:16px/1.5 "IBM Plex Sans",system-ui,sans-serif;display:flex;justify-content:center}
+#app{width:100%;max-width:720px;padding:26px 18px 40px;box-sizing:border-box}
+h1,h2,.no i,.chip,.btn{font-family:"Chakra Petch",Verdana,sans-serif}
+button{font:inherit;color:inherit}button:focus-visible{outline:2px solid var(--cy);outline-offset:2px}
+/* logo: um chip com "pinos" feitos de borda pontilhada */
+.hero{text-align:center;margin-bottom:26px}
+.chip{display:inline-grid;place-items:center;width:62px;height:62px;margin:14px 0 18px;background:var(--cu);color:#1b1206;font-weight:700;border-radius:8px;position:relative;box-shadow:0 0 32px color-mix(in srgb,var(--cu) 55%,transparent)}
+.chip::before{content:"";position:absolute;inset:-10px;border:5px dotted var(--cu);border-radius:4px;opacity:.8}
+h1{font-size:clamp(2.1rem,7vw,3.3rem);margin:0;letter-spacing:1px;line-height:1.1}
+h1 span{color:var(--cy)}
+.sub{color:var(--mut);margin:.5em auto 0;max-width:46ch}
+/* mapa: fases ligadas por uma "trilha" de circuito */
+.map{display:grid;gap:14px;position:relative;padding-left:26px}
+.map::before{content:"";position:absolute;left:11px;top:20px;bottom:20px;width:3px;background:linear-gradient(var(--cy),var(--cu));opacity:.5;border-radius:2px}
+.no{display:grid;grid-template-columns:auto 1fr auto;gap:0 14px;align-items:center;text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;cursor:pointer;position:relative;transition:transform .15s,border-color .15s}
+.no::before{content:"";position:absolute;left:-22px;top:50%;width:12px;height:12px;margin-top:-6px;border-radius:50%;background:var(--cy);box-shadow:0 0 12px var(--cy)}
+.no:hover:not(:disabled){transform:translateX(4px);border-color:var(--cu)}
+.no i{grid-row:1/3;font-style:normal;font-size:1.6rem;font-weight:700;color:var(--cu)}
+.no b{font-weight:600}.no small{color:var(--mut)}
+.no em{grid-row:1/3;grid-column:3;font-style:normal;color:var(--cu);letter-spacing:2px}
+.no:disabled{opacity:.5;cursor:not-allowed}.no:disabled::before{background:var(--line);box-shadow:none}
+.foot{text-align:center;color:var(--mut);margin-top:24px}
+/* tela de pergunta */
+.hud{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px;font-weight:600;font-size:.95rem}
+.pill{background:var(--panel);border:1px solid var(--line);border-radius:99px;padding:3px 14px}
+.vidas{color:var(--err);letter-spacing:3px}
+.bar{height:8px;background:var(--line);border-radius:4px;overflow:hidden;margin-bottom:20px}
+.bar i{display:block;height:100%;width:100%;background:var(--cy);box-shadow:0 0 10px var(--cy);transition:width .1s linear}
+.bar i.baixo{background:var(--err);box-shadow:0 0 10px var(--err)}
+.q{background:var(--panel);border:1px solid var(--line);border-top:3px solid var(--cu);border-radius:10px;padding:22px 20px;font-size:1.22rem;font-weight:600;margin-bottom:16px;box-shadow:0 10px 34px rgba(0,0,0,.25)}
+.ops{display:grid;gap:10px}
+.op{display:flex;gap:12px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;text-align:left;cursor:pointer;transition:border-color .15s,transform .15s}
+.op:hover:not(:disabled){border-color:var(--cy);transform:translateY(-1px)}
+.op .k{flex:none;display:grid;place-items:center;width:28px;height:28px;border-radius:6px;background:var(--line);font:700 .9rem "Chakra Petch",sans-serif}
+.op.certa{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 20%,var(--panel));animation:pulso .5s}
+.op.errada{border-color:var(--err);background:color-mix(in srgb,var(--err) 20%,var(--panel));animation:tremer .4s}
+.op.some{visibility:hidden}
+@keyframes pulso{50%{transform:scale(1.025)}}
+@keyframes tremer{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.btn{background:var(--cu);color:#1b1206;border:0;border-radius:8px;padding:11px 22px;font-weight:700;font-size:1rem;cursor:pointer;margin:16px 10px 0 0}
+.btn.sec{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.exp{margin-top:16px;padding:12px 16px;border-left:4px solid var(--cy);background:var(--panel);border-radius:0 8px 8px 0;color:var(--mut)}
+.exp strong{color:var(--ink)}
+.fim{text-align:center;padding-top:28px}
+.est{font-size:2.8rem;color:var(--cu);letter-spacing:8px}
+.est span{display:inline-block;animation:surge .5s both}
+@keyframes surge{from{transform:scale(0) rotate(-90deg);opacity:0}}
+.rank{display:inline-block;border:1px solid var(--cu);border-radius:99px;padding:4px 18px;color:var(--cu);font-weight:700;margin:6px 0 10px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+.caixa{display:grid;gap:12px;max-width:380px;margin:0 auto;text-align:center}
+.caixa .btn{margin:0}
+input{font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;text-align:center}
+input:focus-visible{outline:2px solid var(--cy);outline-offset:2px}
+.erro{color:var(--err);min-height:1.4em;margin:0}
+.link{background:none;border:0;color:var(--mut);text-decoration:underline;cursor:pointer}
+.rolar{overflow-x:auto;margin:14px 0 4px}
+table{width:100%;border-collapse:collapse;background:var(--panel);border-radius:8px}
+th,td{padding:9px 12px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+th{color:var(--cu);font-family:"Chakra Petch",sans-serif}
+div.no{cursor:default}div.no:hover{transform:none}.no.atual{border-color:var(--cu)}.no.fut{opacity:.5}.no.fut::before{background:var(--line);box-shadow:none}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+/* =====================================================================
+   BANCO DE PERGUNTAS
+   Cada pergunta: [enunciado, resposta certa, [3 erradas], explicação]
+   As alternativas são embaralhadas na hora de jogar.
+   ===================================================================== */
+const FASES = [
+ { nome:"Siglas do computador", desc:"O que cada sigla significa em inglês", p:[
+  ["CPU é a sigla de qual expressão em inglês?","Central Processing Unit",["Central Program Utility","Computer Power Unit","Core Processing Update"],"Em português: Unidade Central de Processamento, o 'cérebro' do PC."],
+  ["A sigla RAM vem de...","Random Access Memory",["Read Access Module","Rapid Archive Memory","Remote Active Memory"],"Memória de Acesso Aleatório: guarda os dados que estão em uso enquanto o PC está ligado."],
+  ["GPU significa...","Graphics Processing Unit",["General Power Unit","Game Processing Update","Graphic Program Utility"],"É o processador gráfico, responsável por imagens, jogos e vídeos."],
+  ["Qual expressão está por trás da sigla USB?","Universal Serial Bus",["United System Board","Universal Storage Block","Ultra Speed Byte"],"Serial Bus = barramento serial. 'Universal' porque serve para muitos dispositivos."],
+  ["BIOS é a sigla de...","Basic Input/Output System",["Binary Internal Operating System","Basic Internet Online Service","Boot Input Output Software"],"Sistema Básico de Entrada e Saída: é o primeiro programa que roda ao ligar o PC."],
+  ["ROM significa 'Read-Only Memory'. O que isso quer dizer?","Memória somente de leitura",["Memória de acesso rápido","Memória removível","Memória de vídeo"],"Read-only = apenas leitura. Os dados dela não são alterados no uso normal."]
+ ]},
+ { nome:"Dentro do processador", desc:"Clock, núcleos e cache", p:[
+  ["Um processador de 4 GHz faz cerca de quantos ciclos por segundo?","4 bilhões",["4 milhões","4 mil","4 trilhões"],"Giga = bilhão. Quanto maior o clock, mais ciclos por segundo."],
+  ["Em inglês, 'quad' quer dizer quatro. Quantos núcleos tem um processador quad-core?","4",["2","6","8"],"Dual-core = 2, quad-core = 4, octa-core = 8."],
+  ["A sigla ALU, dentro da CPU, significa...","Arithmetic Logic Unit",["Advanced Link Utility","Auto Load Unit","Active Logic Update"],"Em português, ULA: faz as contas e as comparações lógicas."],
+  ["Para que serve o cache do processador?","Guardar dados muito usados para acesso super rápido",["Armazenar fotos e vídeos","Resfriar o chip","Conectar ao Wi-Fi"],"'Cache' vem do francês 'cachette', esconderijo: uma memória rápida bem perto do núcleo."],
+  ["'Over' significa 'acima de'. O que é overclock?","Fazer a CPU rodar acima da frequência de fábrica",["Desligar núcleos para economizar energia","Limpar o cache","Trocar a pasta térmica"],"Dá mais desempenho, mas esquenta mais e exige um bom cooler."],
+  ["Para que serve a pasta térmica entre a CPU e o cooler?","Ajudar a passar o calor do chip para o cooler",["Isolar a CPU da energia","Colar a CPU na placa-mãe","Aumentar a memória RAM"],"Ela preenche microfalhas entre as superfícies e melhora a troca de calor."]
+ ]},
+ { nome:"Armazenamento", desc:"HD, SSD e unidades de medida", p:[
+  ["HDD é a sigla de...","Hard Disk Drive",["Hard Data Device","High Disk Driver","Hybrid Digital Drive"],"É o HD tradicional, com pratos magnéticos giratórios."],
+  ["Em 'Solid State Drive' (SSD), 'solid state' quer dizer 'estado sólido'. Isso indica que ele...","Não tem partes móveis",["Gira mais rápido que um HD","É feito de metal maciço","Só funciona ligado na tomada"],"Os dados ficam em chips de memória flash, sem disco girando."],
+  ["Por que o SSD costuma ser mais rápido que o HDD?","Usa chips de memória flash em vez de discos giratórios",["Gira a mais RPM","Gasta mais energia","Tem um cooler próprio"],"Sem agulha para mover, o acesso aos dados é quase instantâneo."],
+  ["Aproximadamente quantos megabytes (MB) cabem em 1 gigabyte (GB)?","Cerca de 1.000",["Cerca de 10","Cerca de 100","Cerca de 1 milhão"],"Mega = milhão e giga = bilhão de bytes. Na prática, 1 GB ≈ 1.000 MB."],
+  ["Qual destes guarda os dados mesmo com o computador desligado?","Pen drive",["Memória RAM","Cache L1","Registradores da CPU"],"Memória não volátil (non-volatile) mantém os dados sem energia."],
+  ["'Backup' é uma palavra inglesa. Qual é a melhor prática?","Manter cópias dos arquivos importantes em outro lugar",["Guardar tudo em um só disco","Apagar arquivos antigos","Formatar o PC toda semana"],"Disco externo ou nuvem: se um falhar, a cópia salva o seu trabalho."]
+ ]},
+ { nome:"Inglês técnico", desc:"Termos que aparecem em todo manual", p:[
+  ["'Bottleneck' é 'gargalo da garrafa'. Em um PC, o que é?","Um componente lento que limita o desempenho dos outros",["Um defeito na caixa do PC","Um tipo de cabo de energia","Um modo de economia de bateria"],"Ex.: uma CPU forte com um HDD lento: o disco vira o gargalo."],
+  ["Ao ligar o PC acontece o 'boot'. O que é isso?","O processo de inicialização do sistema",["A limpeza dos arquivos temporários","O desligamento seguro","Uma atualização de driver"],"Vem de 'bootstrap': o PC 'se levanta puxando as próprias botas'."],
+  ["Um 'benchmark' é...","Um teste que mede o desempenho de um componente",["Um tipo de cabo","Um programa antivírus","Uma marca de SSD"],"Benchmark = ponto de referência: serve para comparar CPUs, SSDs e placas de vídeo."],
+  ["'Firmware' (firm = firme, fixo) é...","Um software gravado no próprio hardware que o controla",["Uma peça de metal protetora","Um tipo de memória RAM","Um cabo de rede"],"Todo SSD tem firmware, e atualizá-lo pode corrigir falhas."],
+  ["'Thermal throttling' acontece quando a CPU...","Reduz a velocidade para não superaquecer",["Aumenta o clock ao esfriar","É desligada pelo antivírus","Troca de núcleo"],"Throttle = 'estrangular': é uma proteção contra o calor excessivo."],
+  ["'Plug and play' (conectar e usar) significa que...","O sistema reconhece o dispositivo automaticamente",["É preciso abrir o PC para instalar","O dispositivo só funciona com bateria","Só técnicos conseguem usar"],"Ex.: ao ligar um pen drive, ele aparece na hora."]
+ ]},
+ { nome:"Desafio final", desc:"Siglas de quem entende de hardware", p:[
+  ["NVMe, o padrão dos SSDs mais velozes, significa...","Non-Volatile Memory Express",["New Video Memory Engine","Network Virtual Memory Extension","Non-Visible Media Exchange"],"'Non-volatile' = não volátil. Roda sobre o PCIe e é bem mais rápido que SATA."],
+  ["SATA, interface de HDs e SSDs, é a sigla de...","Serial Advanced Technology Attachment",["System Archive Transfer Adapter","Storage And Transfer Architecture","Serial Access Transfer Array"],"Substituiu o antigo padrão paralelo (PATA/IDE)."],
+  ["RAID junta vários discos para ganhar velocidade ou segurança. A sigla significa...","Redundant Array of Independent Disks",["Random Access Internal Drive","Rapid Archive of Integrated Data","Remote Array of Intelligent Disks"],"'Redundant' = redundante: os dados podem ser duplicados para não se perderem."],
+  ["TDP, que aparece nas fichas técnicas de CPUs, significa...","Thermal Design Power",["Total Data Processing","Turbo Drive Performance","Temperature Display Panel"],"É o calor (em watts) que o cooler precisa dissipar."],
+  ["Os chips ARM dos celulares usam a filosofia RISC. RISC significa...","Reduced Instruction Set Computer",["Rapid Input System Core","Remote Instruction Storage Chip","Random Instruction Set Code"],"Poucas instruções simples e rápidas: por isso gastam pouca energia."],
+  ["PCIe é a sigla de 'Peripheral Component Interconnect Express'. Para que serve?","Ligar placas de vídeo e SSDs NVMe à placa-mãe em alta velocidade",["Conectar o monitor ao notebook","Carregar a bateria","Ligar o PC à internet"],"Peripheral = periférico, Interconnect = interconexão."]
+ ]}
+];
+
+/* =====================================================================
+   CONFIGURAÇÕES  (edite aqui)
+   ===================================================================== */
+const TEMPO = 20;                 // segundos por pergunta
+const ADMIN_PIN = "miajd0000";    // senha do painel de admin
+const ENVIO_URL = "";             // opcional: link do Google Apps Script para juntar pontos de todos os aparelhos
+
+const TOTAL = FASES.reduce((s, f) => s + f.p.length, 0);
+const app = document.getElementById("app");
+let R = null, timer = null, t = 0, opts = [], logado = false;   // R = partida em andamento
+
+/* ===== ARMAZENAMENTO NO NAVEGADOR (sem login) ===== */
+const ler = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v === null ? d : v; } catch (e) { return d; } };
+const gravar = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+const ranking = () => ler("sb_rank", []);
+const salvarRun = () => gravar("sb_run", R);
+R = ler("sb_run", null);
+
+/* ===== FUNÇÕES AUXILIARES ===== */
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+const embaralhar = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const onde = pos => { for (let f = 0; f < FASES.length; f++) { const n = FASES[f].p.length; if (pos < n) return { f, q: pos }; pos -= n; } return null; };  // posição global -> fase e pergunta
+const patente = p => p >= .9 ? "Mestre do Silício" : p >= .7 ? "Engenheiro(a) de Hardware" : p >= .5 ? "Técnico(a) de Informática" : "Estagiário(a) de TI";
+
+/* ===== TELA 1: NOME DO JOGADOR (sem conta, sem senha) ===== */
+function inicio(){
+  clearInterval(timer); logado = false;
+  app.innerHTML = `
+   <div class="hero"><div class="chip">CPU</div><h1>Silício <span>&amp;</span> Bits</h1>
+   <p class="sub">${TOTAL} perguntas sobre processadores e armazenamento. Cada resposta é definitiva: não dá para voltar nem refazer.</p></div>
+   <div class="caixa"><input id="nome" maxlength="24" placeholder="Digite seu nome" autocomplete="off">
+   <button class="btn" data-a="comecar">Começar</button><p class="erro" id="erro"></p></div>
+   <p class="foot"><button class="link" data-a="admin">Admin</button></p>`;
+}
+function comecar(){
+  const nome = document.getElementById("nome").value.trim(), erro = document.getElementById("erro");
+  if (nome.length < 2) { erro.textContent = "Digite pelo menos 2 letras."; return; }
+  if (ranking().some(r => r.nome.toLowerCase() === nome.toLowerCase())) { erro.textContent = "Esse nome já jogou. Use outro nome."; return; }
+  R = { nome, pos:0, pts:0, ac:0, er:0, seq:0, pend:false, usou:false, salvo:false, fa:[] };
+  salvarRun(); seguir();
+}
+
+/* ===== FLUXO: sempre para frente ===== */
+function seguir(){
+  if (R.pos >= TOTAL) return fim();
+  const { f, q } = onde(R.pos);
+  q === 0 ? intro(f) : pergunta();
+}
+function intro(f){                                            // mapa: fases feitas ficam só para consulta, sem botão de voltar
+  const fa = R.fa || [];
+  app.innerHTML = `<div class="hero"><h2>Mapa da missão</h2><p class="sub">Só dá para seguir em frente. Errou? Sem problema: o jogo continua para o próximo desafio.</p></div>
+   <div class="map">${FASES.map((x, i) => `<div class="no ${i === f ? "atual" : i > f ? "fut" : ""}"><i>${i + 1}</i><b>${x.nome}</b><small>${x.desc}</small><em>${i < f ? (fa[i] || 0) + "/" + x.p.length + " acertos" : i === f ? "agora" : "bloqueada"}</em></div>`).join("")}</div>
+   <div class="fim"><button class="btn" data-a="pergunta">Iniciar fase ${f + 1}</button></div>`;
+}
+
+/* ===== TELA 2: PERGUNTA ===== */
+function pergunta(){
+  const { f, q } = onde(R.pos), [txt, certa, erradas] = FASES[f].p[q];
+  opts = embaralhar([certa, ...erradas]); t = TEMPO;
+  R.pend = true; salvarRun();                                  // se recarregar a página agora, a pergunta conta como erro
+  app.innerHTML = `
+   <div class="hud"><span class="pill">${esc(R.nome)}</span><span class="pill">Fase ${f + 1} · ${q + 1}/${FASES[f].p.length}</span><span class="pill">${R.pts} pts</span></div>
+   <div class="bar"><i id="barra"></i></div>
+   <div class="q">${txt}</div>
+   <div class="ops">${opts.map((o, k) => `<button class="op" data-k="${k}"><span class="k">${k + 1}</span>${o}</button>`).join("")}</div>
+   <div id="fb"></div>
+   <button class="btn sec" id="cinq" data-a="cinq" ${R.usou ? "disabled" : ""}>50/50 (1 por jogo)</button>`;
+  clearInterval(timer);
+  timer = setInterval(() => {
+    t = Math.max(0, t - 0.1);
+    const b = document.getElementById("barra");
+    if (b) { b.style.width = (t / TEMPO * 100) + "%"; b.classList.toggle("baixo", t < 6); }
+    if (t <= 0) responder(-1);
+  }, 100);
+}
+
+/* ===== RESPOSTA DEFINITIVA: trava, pontua, já avança a posição ===== */
+function responder(k){
+  if (!R || !R.pend) return;                                   // já respondida: não há segunda chance
+  clearInterval(timer);
+  const { f, q } = onde(R.pos), [, certa, , exp] = FASES[f].p[q], ok = k >= 0 && opts[k] === certa;
+  document.querySelectorAll(".op").forEach((b, i) => { b.disabled = true; if (opts[i] === certa) b.classList.add("certa"); else if (i === k) b.classList.add("errada"); });
+  document.getElementById("cinq").disabled = true;
+  if (ok) { R.fa = R.fa || []; R.fa[f] = (R.fa[f] || 0) + 1; R.ac++; R.seq++; R.pts += 100 + Math.round(t) * 5 + 25 * Math.min(R.seq - 1, 3); } else { R.er++; R.seq = 0; }
+  R.pend = false; R.pos++; salvarRun();
+  document.getElementById("fb").innerHTML = `<div class="exp"><strong>${ok ? "Correto!" : (k < 0 ? "Tempo esgotado." : "Não foi dessa vez.")}</strong> ${exp}</div>
+   <button class="btn" data-a="seguir">${R.pos >= TOTAL ? "Ver resultado" : "Continuar"}</button>`;
+  document.querySelector("[data-a=seguir]").focus();
+}
+
+/* ===== TELA 3: RESULTADO FINAL (grava no ranking uma única vez) ===== */
+function fim(){
+  clearInterval(timer);
+  if (!R.salvo) {
+    R.salvo = true; salvarRun();
+    const reg = { nome:R.nome, pts:R.pts, ac:R.ac, er:R.er, data:new Date().toISOString() };
+    const r = ranking(); r.push(reg); gravar("sb_rank", r);
+    if (ENVIO_URL) { try { fetch(ENVIO_URL, { method:"POST", mode:"no-cors", body:JSON.stringify(reg) }).catch(() => {}); } catch (e) {} }
+  }
+  const top = ranking().sort((a, b) => b.pts - a.pts).slice(0, 5);
+  app.innerHTML = `<div class="fim"><h2>Fim de jogo, ${esc(R.nome)}!</h2>
+   <div class="rank">${patente(R.ac / TOTAL)}</div>
+   <p><strong>${R.pts}</strong> pontos · ${R.ac} de ${TOTAL} acertos</p>
+   <div class="rolar"><table><thead><tr><th>#</th><th>Nome</th><th>Pontos</th></tr></thead><tbody>${top.map((x, i) => `<tr><td>${i + 1}</td><td>${esc(x.nome)}</td><td>${x.pts}</td></tr>`).join("")}</tbody></table></div>
+   <button class="btn" data-a="novo">Próximo jogador</button></div>`;
+}
+
+/* ===== PAINEL DE ADMIN (protegido por PIN) ===== */
+function admin(){
+  app.innerHTML = `<h2>Painel do administrador</h2><div class="caixa"><input id="pin" type="password" placeholder="PIN" autocomplete="off">
+   <button class="btn" data-a="entrar">Entrar</button><button class="btn sec" data-a="inicio">Voltar</button><p class="erro" id="erro"></p></div>`;
+}
+function painel(){
+  const r = ranking().sort((a, b) => b.pts - a.pts), n = r.length, media = n ? Math.round(r.reduce((s, x) => s + x.pts, 0) / n) : 0;
+  app.innerHTML = `<h2>Painel do administrador</h2>
+   <div class="hud"><span class="pill">${n} jogadores</span><span class="pill">Média: ${media} pts</span><span class="pill">Maior: ${n ? r[0].pts : 0} pts</span></div>
+   <div class="rolar"><table><thead><tr><th>#</th><th>Nome</th><th>Pontos</th><th>Acertos</th><th>Erros</th><th>Data</th></tr></thead><tbody>
+   ${r.map((x, i) => `<tr><td>${i + 1}</td><td>${esc(x.nome)}</td><td>${x.pts}</td><td>${x.ac}</td><td>${x.er}</td><td>${new Date(x.data).toLocaleString("pt-BR")}</td></tr>`).join("") || '<tr><td colspan="6">Ninguém jogou ainda.</td></tr>'}</tbody></table></div>
+   <button class="btn" data-a="csv">Exportar CSV</button><button class="btn sec" data-a="limpar">Limpar ranking</button><button class="btn sec" data-a="inicio">Sair</button>`;
+}
+function csv(){                                               // baixa o ranking em planilha
+  const lin = ["Nome;Pontos;Acertos;Erros;Data", ...ranking().sort((a, b) => b.pts - a.pts).map(x =>
+    [/^[=+\-@]/.test(x.nome) ? "'" + x.nome : x.nome, x.pts, x.ac, x.er, x.data].map(v => '"' + String(v).replace(/"/g, '""') + '"').join(";"))];
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob(["\ufeff" + lin.join("\n")], { type:"text/csv" }));
+  a.download = "ranking-silicio-e-bits.csv"; a.click();
+}
+
+/* ===== EVENTOS ===== */
+app.addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  const a = b.dataset.a;
+  if (b.classList.contains("op")) responder(+b.dataset.k);
+  else if (a === "comecar") comecar();
+  else if (a === "pergunta") pergunta();
+  else if (a === "seguir") seguir();
+  else if (a === "novo") { R = null; gravar("sb_run", null); inicio(); }
+  else if (a === "admin") admin();
+  else if (a === "inicio") inicio();
+  else if (a === "entrar") { if (document.getElementById("pin").value === ADMIN_PIN) { logado = true; painel(); } else document.getElementById("erro").textContent = "PIN incorreto."; }
+  else if (a === "csv" && logado) csv();
+  else if (a === "limpar" && logado) {                        // dois cliques para confirmar
+    if (b.dataset.sim) { gravar("sb_rank", []); painel(); } else { b.dataset.sim = 1; b.textContent = "Clique de novo para apagar tudo"; }
+  }
+  else if (a === "cinq" && R && R.pend && !R.usou) {          // 50/50: esconde 2 erradas
+    R.usou = true; salvarRun(); b.disabled = true;
+    const certa = FASES[onde(R.pos).f].p[onde(R.pos).q][1];
+    embaralhar([...document.querySelectorAll(".op")].filter((x, k) => opts[k] !== certa)).slice(0, 2).forEach(x => x.classList.add("some"));
+  }
+});
+document.addEventListener("keydown", e => {
+  if (e.key === "Enter" && e.target.tagName === "INPUT") { const p = app.querySelector(".caixa .btn"); if (p) p.click(); return; }
+  if (R && R.pend && e.key >= "1" && e.key <= "4") { const b = document.querySelector(`.op[data-k="${e.key - 1}"]`); if (b && !b.classList.contains("some")) responder(e.key - 1); }
+});
+
+/* ===== ABERTURA: se a página foi recarregada no meio do jogo, retoma sem voltar ===== */
+if (R) { if (R.pend) { R.pend = false; R.er++; R.seq = 0; R.pos++; salvarRun(); } seguir(); } else inicio();
+</script>
+</body>
+</html>
