@@ -155,21 +155,24 @@ const gravar = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } c
 const BASE = DB_URL.replace(/\/+$/, "");
 const online = !!BASE;
 let REDE = online ? "conectando" : "local";                    // local | conectando | ok | off
-let RANK = ler("pa_rank", []);                                 // cópia do ranking na memória (sempre sincrona)
+let RANK = online ? [] : ler("pa_rank", []);                   // cópia do ranking na memória; com banco online, só vale o que veio do banco
 const ranking = () => RANK;
 const salvarRun = () => gravar("pa_run", R);
 R = ler("pa_run", null);
 const chave = n => n.toLowerCase().replace(/[.$#\[\]\/]/g, "_");   // um registro por nome (evita nomes repetidos)
 
 /* envia registros guardados na fila (se a internet caiu, tenta de novo depois) */
+let DETALHE = "";                                              // explica o motivo quando algo dá errado
 async function esvaziarFila(){
-  let fila = ler("pa_fila", []);
+  const fila = ler("pa_fila", []);
   if (!online || !fila.length) return;
   const resto = [];
   for (const reg of fila) {
     try {
       const r = await fetch(`${BASE}/ranking/${encodeURIComponent(chave(reg.nome))}.json`, { method:"PUT", body:JSON.stringify(reg) });
-      if (!r.ok && r.status >= 500) resto.push(reg);           // erro do servidor: tenta de novo; 4xx (ex.: nome já existe) descarta
+      if (r.ok) continue;                                      // gravou: sai da fila
+      if (r.status === 401 || r.status === 403) { DETALHE = "o banco recusou gravar: confira as Regras e clique em Publicar"; resto.push(reg); }
+      else if (r.status >= 500) resto.push(reg);
     } catch (e) { resto.push(reg); }
   }
   gravar("pa_fila", resto);
@@ -178,13 +181,20 @@ async function esvaziarFila(){
 async function carregar(){
   if (!online) return;
   try {
+    DETALHE = "";
     await esvaziarFila();
-    const r = await fetch(`${BASE}/ranking.json`, { cache:"no-store" });
-    if (!r.ok) throw new Error(r.status);
+    const r = await fetch(`${BASE}/ranking.json?t=${Date.now()}`);   // pedido simples (o ?t= evita resposta antiga em cache)
+    if (r.status === 401 || r.status === 403) throw new Error("o banco recusou ler: confira as Regras e clique em Publicar");
+    if (r.status === 404) throw new Error("endereço do banco não encontrado: confira o DB_URL");
+    if (!r.ok) throw new Error("erro " + r.status);
     const lista = Object.values(await r.json() || {}).filter(x => x && x.nome);
-    for (const p of ler("pa_fila", [])) if (!lista.some(x => chave(x.nome) === chave(p.nome))) lista.push(p);   // mostra o que ainda não subiu
-    RANK = lista; gravar("pa_rank", RANK); REDE = "ok";
-  } catch (e) { REDE = "off"; }
+    const fila = ler("pa_fila", []).filter(p => !lista.some(x => chave(x.nome) === chave(p.nome)));   // o que já chegou ao banco sai da fila
+    gravar("pa_fila", fila);
+    RANK = lista.concat(fila); gravar("pa_rank", RANK); REDE = "ok";   // mostra também o que ainda não subiu
+  } catch (e) {
+    REDE = "off";
+    DETALHE = e instanceof TypeError ? "sem internet ou endereço do banco inválido" : e.message;
+  }
   atualizarTela();
 }
 /* grava o resultado de um jogador */
@@ -195,7 +205,7 @@ function enviar(reg){
   carregar();
 }
 const topHTML = n => ranking().slice().sort((a, b) => b.pts - a.pts).slice(0, n).map((x, i) => `<tr><td>${i + 1}</td><td>${esc(x.nome)}</td><td>${x.pts}</td></tr>`).join("") || '<tr><td colspan="3">Ninguém jogou ainda.</td></tr>';
-const statusTxt = () => ({ local:"Modo local: ranking só neste aparelho", conectando:"Conectando ao ranking online…", ok:"Ranking online ao vivo", off:"Sem conexão: tentando reconectar…" }[REDE]);
+const statusTxt = () => ({ local:"Modo local: ranking só neste aparelho (DB_URL vazio)", conectando:"Conectando ao ranking online…", ok:"Ranking online ao vivo" + (DETALHE ? " (aviso: " + DETALHE + ")" : ""), off:"Sem conexão com o banco: " + (DETALHE || "tentando reconectar…") }[REDE]);
 function atualizarTela(){                                      // redesenha só as partes que mostram o ranking
   const a = document.getElementById("topinicio"), b = document.getElementById("topfim"), c = document.getElementById("admcorpo"), s = document.getElementById("status");
   if (a) a.innerHTML = topHTML(5);
