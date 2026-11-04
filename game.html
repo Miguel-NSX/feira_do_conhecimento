@@ -356,9 +356,15 @@ app.addEventListener("click", e => {
     if (b.dataset.sim) {
       (async () => {
         try {
-          if (online) { const r = await fetch(`${BASE}/ranking.json`, { method:"DELETE" }); if (!r.ok) throw new Error(r.status); gravar("pa_fila", []); }
+          if (online) {                                       // apaga registro por registro (as regras só permitem apagar cada nome)
+            const l = await fetch(`${BASE}/ranking.json?shallow=true`); if (!l.ok) throw new Error(l.status);
+            const chaves = Object.keys(await l.json() || {});
+            const res = await Promise.all(chaves.map(k => fetch(`${BASE}/ranking/${encodeURIComponent(k)}.json`, { method:"DELETE" })));
+            if (res.some(r => !r.ok)) throw new Error("falha ao apagar");
+            gravar("pa_fila", []);
+          }
           RANK = []; gravar("pa_rank", []); painel();
-        } catch (e) { document.getElementById("erro").textContent = "Não foi possível apagar no banco online. Confira a conexão e as regras do banco."; b.dataset.sim = ""; b.textContent = "Limpar ranking"; }
+        } catch (e) { document.getElementById("erro").textContent = "Não foi possível apagar no banco online (código: " + (e && e.message ? e.message : e) + "). Confira a conexão e as regras do banco."; b.dataset.sim = ""; b.textContent = "Limpar ranking"; }
       })();
     } else { b.dataset.sim = 1; b.textContent = "Clique de novo para apagar tudo"; }
   }
